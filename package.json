@@ -1,0 +1,23 @@
+{
+  "name": "via-table",
+  "version": "0.0.1",
+  "description": "Via table.",
+  "main": "./src/via-table-view",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "via",
+    "trading",
+    "table"
+  ],
+  "repository": "https://github.com/via-platform/via-table",
+  "author": "Dakota Gordon",
+  "engines": {
+    "via": "*"
+  },
+  "dependencies": {
+    "etch": "^0.12.7",
+    "underscore-plus": "^1.0.0"
+  }
+}
