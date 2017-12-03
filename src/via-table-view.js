@@ -3,12 +3,10 @@ const etch = require('etch');
 const $ = etch.dom;
 
 module.exports = class ViaTableView {
-    constructor({columns, data}){
+    constructor({columns, data, classes}){
         this.disposables = new CompositeDisposable();
         this.columns = columns;
-
-        this.element = document.createElement('div');
-        this.element.classList.add('via-table');
+        this.classes = classes || [];
 
         this.data = data || [];
 
@@ -23,7 +21,7 @@ module.exports = class ViaTableView {
     }
 
     render(){
-        return $.div({classList: 'via-table'}, ...this.data.map(row => $(ViaTableRow, {row, columns: this.columns})));
+        return $.div({classList: 'via-table ' + this.classes.join(' ')}, ...this.data.map(row => $(ViaTableRow, {row, columns: this.columns})));
     }
 
     initialize(options){
