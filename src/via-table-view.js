@@ -1,6 +1,7 @@
 const {Disposable, CompositeDisposable} = require('via');
 const etch = require('etch');
 const $ = etch.dom;
+const _ = require('underscore-plus');
 
 module.exports = class ViaTableView {
     constructor({columns, data, classes}){
@@ -16,7 +17,7 @@ module.exports = class ViaTableView {
 
     update({data}){
         this.data = data;
-        console.log('Updating table ' + data.length);
+        // console.log('Updating table ' + data.length);
         return etch.update(this);
     }
 
@@ -88,7 +89,13 @@ class ViaTableRow {
 
     render(){
         let columns = this.columns.map(c => {
-            let classes = c.classes || '';
+            let classes = '';
+
+            if(_.isFunction(c.classes)){
+                classes = c.classes(this.row);
+            }else if(_.isString(c.classes)){
+                classes = c.classes;
+            }
 
             if(c.accessor){
                 return $.div({classList: 'td ' + classes}, c.accessor(this.row) || '-');
