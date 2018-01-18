@@ -89,7 +89,7 @@ class ViaTableRow {
 
     render(){
         let columns = this.columns.map(c => {
-            let classes = '';
+            let classes = '', value;
 
             if(_.isFunction(c.classes)){
                 classes = c.classes(this.row);
@@ -98,9 +98,13 @@ class ViaTableRow {
             }
 
             if(c.accessor){
-                return $.div({classList: 'td ' + classes}, c.accessor(this.row) || '-');
+                value = c.accessor(this.row);
+                return $.div({classList: 'td ' + classes}, _.isUndefined(value) ? '-' : value);
             }else if(c.element){
                 return c.element(this.row);
+            }else if(_.isString(c)){
+                value = this.row[c];
+                return $.div({classList: 'td ' + classes}, _.isUndefined(value) ? '-' : value);
             }else{
                 return $.div({classList: 'td ' + classes}, '-');
             }
