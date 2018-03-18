@@ -1,49 +1,113 @@
-const {Disposable, CompositeDisposable} = require('via');
+const {Disposable, CompositeDisposable, Emitter} = require('via');
 const etch = require('etch');
 const $ = etch.dom;
 const _ = require('underscore-plus');
+const uuid = require('uuid/v1');
 
 module.exports = class ViaTableView {
-    constructor({columns, data, classes}){
+    constructor({columns, data, classes, options}){
+        this.emitter = new Emitter();
         this.disposables = new CompositeDisposable();
-        this.columns = columns;
-        this.classes = classes || [];
-
+        this.classes = classes || '';
         this.data = data || [];
+        this.columns = new Map();
+        this.options = _.extend(options || {}, {headers: true});
+        this.uuid = `via-table-${uuid()}`;
 
-        // this.initialize(options);
+        this.initialize(columns);
         etch.initialize(this);
     }
 
-    update({data}){
+    update({columns, data, classes, options}){
         this.data = data;
-        // console.log('Updating table ' + data.length);
+        this.classes = classes;
+
+        this.updateContextMenu();
+
         return etch.update(this);
     }
 
     render(){
-        return $.div({classList: 'via-table ' + this.classes.join(' ')}, ...this.data.map(row => $(ViaTableRow, {row, columns: this.columns})));
+        const columns = Array.from(this.columns.values());
+        return $.div({classList: `via-table ${this.uuid} ${this.classes}`}, this.headers(), this.data.map(row => $(ViaTableRow, {row, columns})));
     }
 
-    initialize(options){
-        if(!this.columns || !this.columns.length){
-            throw new Error('Tables must include at least one column');
+    headers(){
+        if(!this.options.headers) return '';
+
+        const headers = [];
+
+        for(const col of this.columns.values()){
+            if(col.visible){
+                const title = _.isFunction(col.title) ? col.title() : col.title;
+                const description = _.isFunction(col.description) ? col.description() : col.description;
+
+                headers.push($.div({classList: 'td table-header', title: description}, title));
+            }
         }
 
-        if(options.headers){
-            this.headers = document.createElement('div');
-            this.headers.classList.add('table-headers');
+        return $.div({classList: 'thead toolbar table-headers'}, headers);
+    }
 
-            for(let column of this.columns){
-                let element = document.createElement('div');
-                element.textContent = column.name;
+    toggle(column){
+        if(this.columns.has(column.id)){
+            const col = this.columns.get(column.id);
+            col.visible = !col.visible;
+            this.emitter.emit('did-toggle-column', {column, visible: col.visible});
+            this.updateContextMenu();
+            etch.update(this);
+        }
+    }
 
-                this.headers.appendChild(element);
+    sort(column, direction){
+        if(this.columns.has(column)){
+            const col = this.columns.get('column');
+
+            if(col.sort !== direction){
+                col.sort = direction;
+                this.emitter.emit('did-sort-column', {column, direction});
+                etch.update(this);
             }
         }
     }
 
-    destroy() {
+    initialize(columns){
+        for(const col of columns){
+            const name = col.name;
+            const existing = this.columns.get(col.name);
+            const def = !!col.default;
+            const visible = existing ? existing.visible : def;
+            const sort = existing ? existing.sort : undefined;
+
+            this.columns.set(col.name, _.defaults({}, col, {visible, sort, def, classes: '', description: '', title: col.title}));
+        }
+
+        this.updateContextMenu();
+    }
+
+    updateContextMenu(){
+        const columns = Array.from(this.columns.values());
+        const itemsBySelector = {};
+        const items = columns.map(column => {
+            return {
+                label: column.title,
+                click: this.toggle.bind(this),
+                type: 'checkbox',
+                checked: column.visible,
+                id: column.name
+            };
+        });
+
+        itemsBySelector[`.${this.uuid} .thead`] = [{label: 'Table Columns', enabled: false}].concat(items);
+
+        if(this.menu) this.menu.dispose();
+        this.menu = via.contextMenu.add(itemsBySelector);
+    }
+
+    destroy(){
+        if(this.menu) this.menu.dispose();
+
+        this.columns.clear();
         this.disposables.dispose();
         return etch.destroy(this);
     }
@@ -78,8 +142,6 @@ module.exports = class ViaTableView {
     }
 }
 
-let count = 0;
-
 class ViaTableRow {
     constructor({row, columns}) {
         this.columns = columns;
@@ -88,32 +150,15 @@ class ViaTableRow {
     }
 
     render(){
-        let columns = this.columns.map(c => {
-            let classes = '', value;
-
-            if(_.isFunction(c.classes)){
-                classes = c.classes(this.row);
-            }else if(_.isString(c.classes)){
-                classes = c.classes;
-            }
-
-            if(c.accessor){
-                value = c.accessor(this.row);
-                return $.div({classList: 'td ' + classes}, _.isUndefined(value) ? '-' : value);
-            }else if(c.element){
-                return c.element(this.row);
-            }else if(_.isString(c)){
-                value = this.row[c];
-                return $.div({classList: 'td ' + classes}, _.isUndefined(value) ? '-' : value);
-            }else{
-                return $.div({classList: 'td ' + classes}, '-');
-            }
-        });
-
-        return $.div({classList: 'tr'}, ...columns);
+        return $.div({classList: 'tr'}, this.columns.map(col => {
+            if(col.element) return col.element(this.row);
+            if(col.accessor) return $.div({classList: `td ${classes}`}, col.accessor(this.row));
+            return $.div({classList: `td ${classes}`}, '-');
+        }));
     }
 
-    update({row}){
+    update({row, columns}){
+        this.columns = columns;
         this.row = row;
         etch.update(this);
     }
