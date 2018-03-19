@@ -20,7 +20,6 @@ module.exports = class ViaTableView {
 
     update({columns, data, classes, options}){
         this.data = data;
-        this.classes = classes;
 
         this.updateContextMenu();
 
@@ -29,24 +28,23 @@ module.exports = class ViaTableView {
 
     render(){
         const columns = Array.from(this.columns.values());
-        return $.div({classList: `via-table ${this.uuid} ${this.classes}`}, this.headers(), this.data.map(row => $(ViaTableRow, {row, columns})));
+        return $.div({classList: `via-table ${this.uuid} ${this.classes}`},
+            $.div({classList: 'thead toolbar table-header'}, this.headers()),
+            $.div({classList: 'tbody table-body'}, this.data.map(row => $(ViaTableRow, {row, columns})))
+        );
     }
 
     headers(){
-        if(!this.options.headers) return '';
+        const columns = Array.from(this.columns.values());
 
-        const headers = [];
+        return columns.map(col => {
+            if(!col.visible) return '';
 
-        for(const col of this.columns.values()){
-            if(col.visible){
-                const title = _.isFunction(col.title) ? col.title() : col.title;
-                const description = _.isFunction(col.description) ? col.description() : col.description;
+            const title = _.isFunction(col.title) ? col.title() : col.title;
+            const description = _.isFunction(col.description) ? col.description() : col.description;
 
-                headers.push($.div({classList: 'td table-header', title: description}, title));
-            }
-        }
-
-        return $.div({classList: 'thead toolbar table-headers'}, headers);
+            return $.div({classList: 'td table-header', title: description}, title);
+        });
     }
 
     toggle(column){
@@ -89,8 +87,10 @@ module.exports = class ViaTableView {
         const columns = Array.from(this.columns.values());
         const itemsBySelector = {};
         const items = columns.map(column => {
+            const label = _.isFunction(column.title) ? column.title() : column.title;
+
             return {
-                label: column.title,
+                label,
                 click: this.toggle.bind(this),
                 type: 'checkbox',
                 checked: column.visible,
@@ -151,8 +151,13 @@ class ViaTableRow {
 
     render(){
         return $.div({classList: 'tr'}, this.columns.map(col => {
+            if(!col.visible) return '';
+            
+            const classes = _.isFunction(col.classes) ? col.classes(this.row) : col.classes;
+
             if(col.element) return col.element(this.row);
             if(col.accessor) return $.div({classList: `td ${classes}`}, col.accessor(this.row));
+
             return $.div({classList: `td ${classes}`}, '-');
         }));
     }
