@@ -5,21 +5,25 @@ const _ = require('underscore-plus');
 const uuid = require('uuid/v1');
 
 module.exports = class ViaTableView {
-    constructor({columns, data, classes, options}){
+    constructor({columns, data, options, properties}){
         this.emitter = new Emitter();
         this.disposables = new CompositeDisposable();
-        this.classes = classes || '';
         this.data = data || [];
         this.columns = new Map();
         this.options = _.extend(options || {}, {headers: true});
         this.uuid = `via-table-${uuid()}`;
+        this.properties = _.isFunction(properties) ? properties : () => {};
 
         this.initialize(columns);
         etch.initialize(this);
     }
 
-    update({columns, data, classes, options}){
+    update({columns, data, properties, options}){
         this.data = data;
+
+        if(properties){
+            this.properties = _.isFunction(properties) ? properties : () => {};
+        }
 
         this.updateContextMenu();
 
@@ -28,9 +32,9 @@ module.exports = class ViaTableView {
 
     render(){
         const columns = Array.from(this.columns.values());
-        return $.div({classList: `via-table ${this.uuid} ${this.classes}`},
+        return $.div({classList: `via-table ${this.uuid}`},
             $.div({classList: 'thead toolbar table-header'}, this.headers()),
-            $.div({classList: 'tbody table-body'}, this.data.map(row => $(ViaTableRow, {row, columns})))
+            $.div({classList: 'tbody table-body'}, this.data.map(row => $(ViaTableRow, {row, columns, properties: this.properties(row)})))
         );
     }
 
@@ -143,16 +147,17 @@ module.exports = class ViaTableView {
 }
 
 class ViaTableRow {
-    constructor({row, columns}) {
+    constructor({row, columns, properties}) {
         this.columns = columns;
         this.row = row;
+        this.properties = _.extend({classList: 'tr'}, properties);
         etch.initialize(this);
     }
 
     render(){
-        return $.div({classList: 'tr'}, this.columns.map(col => {
+        return $.div(this.properties, this.columns.map(col => {
             if(!col.visible) return '';
-            
+
             const classes = _.isFunction(col.classes) ? col.classes(this.row) : col.classes;
 
             if(col.element) return col.element(this.row);
