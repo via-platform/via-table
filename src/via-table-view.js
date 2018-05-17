@@ -5,7 +5,7 @@ const _ = require('underscore-plus');
 const uuid = require('uuid/v1');
 
 module.exports = class ViaTableView {
-    constructor({columns, data, options, properties}){
+    constructor({columns, data, options, properties, classes}){
         this.emitter = new Emitter();
         this.disposables = new CompositeDisposable();
         this.data = data || [];
@@ -13,6 +13,7 @@ module.exports = class ViaTableView {
         this.options = _.extend(options || {}, {headers: true});
         this.uuid = `via-table-${uuid()}`;
         this.properties = _.isFunction(properties) ? properties : () => {};
+        this.classes = classes || '';
 
         this.initialize(columns);
         etch.initialize(this);
@@ -32,7 +33,8 @@ module.exports = class ViaTableView {
 
     render(){
         const columns = Array.from(this.columns.values());
-        return $.div({classList: `via-table ${this.uuid}`},
+        
+        return $.div({classList: `via-table ${this.classes} ${this.uuid}`},
             $.div({classList: 'thead toolbar table-header'}, this.headers()),
             $.div({classList: 'tbody table-body'}, this.data.map(row => $(ViaTableRow, {row, columns, properties: this.properties(row)})))
         );
