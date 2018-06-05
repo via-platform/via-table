@@ -33,7 +33,7 @@ module.exports = class ViaTableView {
 
     render(){
         const columns = Array.from(this.columns.values());
-        
+
         return $.div({classList: `via-table ${this.classes} ${this.uuid}`},
             $.div({classList: 'thead toolbar table-header'}, this.headers()),
             $.div({classList: 'tbody table-body'}, this.data.map(row => $(ViaTableRow, {row, columns, properties: this.properties(row)})))
@@ -169,9 +169,10 @@ class ViaTableRow {
         }));
     }
 
-    update({row, columns}){
+    update({row, columns, properties}){
         this.columns = columns;
         this.row = row;
+        this.properties = _.extend({classList: 'tr'}, properties);
         etch.update(this);
     }
 
