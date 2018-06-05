@@ -1,6 +1,6 @@
 {
   "name": "via-table",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Via table.",
   "main": "./src/via-table-view",
   "scripts": {
