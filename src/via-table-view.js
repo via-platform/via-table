@@ -5,7 +5,7 @@ const _ = require('underscore-plus');
 const uuid = require('uuid/v1');
 
 module.exports = class ViaTableView {
-    constructor({columns, data, options, properties, classes}){
+    constructor({selected, columns, data, options, properties, classes}){
         this.emitter = new Emitter();
         this.disposables = new CompositeDisposable();
         this.data = data || [];
@@ -14,13 +14,15 @@ module.exports = class ViaTableView {
         this.uuid = `via-table-${uuid()}`;
         this.properties = _.isFunction(properties) ? properties : () => {};
         this.classes = classes || '';
+        this.selected = selected;
 
         this.initialize(columns);
         etch.initialize(this);
     }
 
-    update({columns, data, properties, options}){
+    update({selected, columns, data, properties, options}){
         this.data = data;
+        this.selected = selected;
 
         if(properties){
             this.properties = _.isFunction(properties) ? properties : () => {};
@@ -36,7 +38,7 @@ module.exports = class ViaTableView {
 
         return $.div({classList: `via-table ${this.classes} ${this.uuid}`},
             $.div({classList: 'thead toolbar table-header'}, this.headers()),
-            $.div({classList: 'tbody table-body'}, this.data.map(row => $(ViaTableRow, {row, columns, properties: this.properties(row)})))
+            $.div({classList: 'tbody table-body'}, this.data.map(row => $(ViaTableRow, {selected: this.selected === row, row, columns, properties: this.properties(row)})))
         );
     }
 
@@ -149,10 +151,11 @@ module.exports = class ViaTableView {
 }
 
 class ViaTableRow {
-    constructor({row, columns, properties}) {
+    constructor({row, columns, properties, selected}) {
+        this.selected = selected;
         this.columns = columns;
         this.row = row;
-        this.properties = _.extend({classList: 'tr'}, properties);
+        this.properties = _.extend({classList: `tr ${this.selected ? 'selected' : ''}`}, properties);
         etch.initialize(this);
     }
 
@@ -169,33 +172,34 @@ class ViaTableRow {
         }));
     }
 
-    update({row, columns, properties}){
+    update({row, columns, properties, selected}){
+        this.selected = selected;
         this.columns = columns;
         this.row = row;
-        this.properties = _.extend({classList: 'tr'}, properties);
+        this.properties = _.extend({classList: `tr ${this.selected ? 'selected' : ''}`}, properties);
         etch.update(this);
     }
 
-    mouseDown(event) {
-        event.preventDefault()
+    mouseDown(event){
+        event.preventDefault();
     }
 
-    mouseUp() {
-        event.preventDefault()
+    mouseUp(){
+        event.preventDefault();
     }
 
-    didClick(event) {
-        event.preventDefault()
-        this.onclick()
+    didClick(event){
+        event.preventDefault();
+        this.onclick();
     }
 
     destroy() {
         etch.destroy(this);
     }
 
-    scrollIntoViewIfNeeded() {
-        if (this.selected) {
-            this.element.scrollIntoViewIfNeeded()
+    scrollIntoViewIfNeeded(){
+        if(this.selected){
+            this.element.scrollIntoViewIfNeeded();
         }
     }
 }
